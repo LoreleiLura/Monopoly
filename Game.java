@@ -2,7 +2,6 @@ package edu.neumont.csc110;
 
 import java.io.IOException;
 import java.util.Random;
-
 import edu.neumont.csc110.Player.PieceNames;
 import interfaces.ConsoleUI;
 
@@ -12,12 +11,13 @@ public class Game {
 	
 	ChanceCard chanceCard = new ChanceCard();
 	CommunityChestCard chestCards = new CommunityChestCard();
-	PropSpace[] propSpace = new PropSpace[22];
-	UtilSpace[] utilSpace = new UtilSpace[6];
+	BoardSpace[] GameBoard = new BoardSpace[40];
 	
 	Player[] players = new Player[8];
 	int playerCount = 0;
 	public int turn = 0;
+	public boolean chestJailCard = false;
+	public boolean chanceJailCard = false;
 	
 	public void printStartMenu() throws IOException, NoSuchFieldException {
 		String[] menuOptions = new String[2];
@@ -38,7 +38,8 @@ public class Game {
 	
 	public void game() throws IOException, NoSuchFieldException {
 		boolean play = true;
-		while(play) {		
+		while(play) {
+			initSpaces();
 			initChestCards();
 			initChanceCards();
 			askForPlayers();
@@ -52,6 +53,7 @@ public class Game {
 		while(!gameOver) {
 			System.out.println("");
 			System.out.println(players[turn].Name + ", your turn" );
+			System.out.println("You have $" + players[turn].Money);
 			if(players[turn].inJail == true) {
 				jailedAction();
 			}
@@ -66,42 +68,77 @@ public class Game {
 		}
 	}
 
-	public void jailedAction() throws IOException, NoSuchFieldException {
+	private void jailedAction() throws IOException {
 		String[] jailOptions = new String[4];
 		jailOptions[0] = "Roll for double";
 		jailOptions[1] = "Use 'Get out of Jail Free' card";
 		jailOptions[2] = "Purchase card from another player";
 		jailOptions[3] = "Pay fine of $50";
-		int selection = ConsoleUI.promptForMenuSelection(jailOptions, false);
-		switch(selection) {
-		case 0:
-			int dice1 = rnd.nextInt(6);
-			int dice2 = rnd.nextInt(6);
-			System.out.println("You rolled " + dice1 + " and " + dice2);
-			if(dice1 == dice2) {
-				int roll = dice1+dice2;
-				moveToSpace(roll);
-				players[turn].inJail = false;
+		if(players[turn].jailTurns == 3) {
+			System.out.println("Pay $50 to get out of jail");
+		}
+		else {
+			int selection = ConsoleUI.promptForMenuSelection(jailOptions, false);
+			switch(selection) {
+			case 0:
+				int dice1 = rnd.nextInt(6);
+				int dice2 = rnd.nextInt(6);
+				System.out.println("You rolled " + dice1 + " and " + dice2);
+				if(dice1 == dice2) {
+					int roll = dice1+dice2;
+					moveToSpace(roll);
+					players[turn].inJail = false;
+				}
+				break;
+			case 1:
+				
+				try {
+					players[turn].useJailCard();
+					players[turn].inJail = false;
+				} 
+				catch (NoSuchFieldException noJailCard) {
+					System.out.println("You don't have a 'Get Out of Jail Free' card");
+					jailedAction();
+				}
+				break;
+			case 2:
+				if(chanceJailCard == true || chestJailCard == true) {
+					for(int i=0;i<playerCount;i++) {
+						if(players[i].numJailCards > 0) {
+							boolean sell = ConsoleUI.promptForBool(players[i].Name + ", do you want to sell your card? Y/N", "Y", "N");
+							if(sell) {
+								int price = ConsoleUI.promptForInt(players[i].Name + ", what is the price?", 0, Integer.MAX_VALUE);
+								boolean buy = ConsoleUI.promptForBool(players[turn].Name + ", will you buy the card for $" + price + "? Y/N", "Y", "N");
+								if(buy) {
+									players[turn].setMoney(players[turn].Money-price);
+									players[i].setMoney(players[i].Money+price);
+									players[turn].inJail = false;
+								}
+							}
+							else {
+								System.out.println(players[i].Name + " does not wish to sell their card.");
+							}
+						}
+						else {
+							System.out.println(players[i].Name + " does not have a card.");
+						}
+					}
+				}
+				break;
+			case 3:
+				if(players[turn].jailTurns != 0) {
+					players[turn].setMoney(players[turn].Money-50);
+					players[turn].inJail = false;
+				}
+				else {
+					System.out.println("You cannot pay your way out of jail on the first turn");
+					jailedAction();
+				}
 			}
-			break;
-		case 1:
-			players[turn].useJailCard();
-			players[turn].inJail = false;
-			break;
-		case 2:
-			//check if anyone has a card
-			//player name price
-			//y/n
-			//transfer
-			//use
-			break;
-		case 3:
-			players[turn].setMoney(players[turn].Money-50);
-			players[turn].inJail = false;
 		}
 	}
 
-	public void roll() throws IOException {
+	private void roll() throws IOException {
 		int dice1 = rnd.nextInt(6)+1;
 		int dice2 = rnd.nextInt(6)+1;
 		if(dice1 == dice2) {
@@ -110,13 +147,46 @@ public class Game {
 		System.out.println("You rolled " + dice1 + " and " + dice2 + " for " + (dice1+dice2));
 		int roll = dice1+dice2;
 		moveToSpace(roll);
-		printGameMenu();
+		spaceAction();
 		if(dice1 == dice2 && players[turn].doubleCount < 3) {
+			System.out.println(players[turn].Name + " rolls again");
 			roll();
 		}
 	}
 	
-	public void printGameMenu() throws IOException {
+	private void spaceAction() throws IOException {
+		if(players[turn].location == 7 || players[turn].location == 22 || players[turn].location == 30) {
+			System.out.println("Landed on Chance");
+			chanceCards();
+		}
+		else if(players[turn].location == 2 || players[turn].location == 17 || players[turn].location == 33) {
+			System.out.println("Landed on Community Chest");
+			chestCards();
+		}
+		else if(players[turn].location == 4) {
+			System.out.println("Income tax");
+			players[turn].setMoney(players[turn].Money-200);
+		}
+		else if(players[turn].location == 10) {
+			System.out.println("Just visiting");
+		}
+		else if(players[turn].location == 0) {
+			System.out.println("'Go'");
+		}
+		else if(players[turn].location == 20) {
+			System.out.println("Free parking");
+		}
+		else if(players[turn].location == 38) {
+			System.out.println("Luxury tax");
+			players[turn].setMoney(players[turn].Money-100);
+		}
+		else {
+//			System.out.println(PropSpace[players[turn].location].name);
+			printGameMenu();
+		}
+	}
+
+	private void printGameMenu() throws IOException {
 		if(players[turn].location != 10) {
 			String[] options = new String[5];
 			options[0] = "Buy Property";
@@ -127,17 +197,17 @@ public class Game {
 			int selection = ConsoleUI.promptForMenuSelection(options, false);
 			switch(selection) {
 			case 0:
-				propSpace[players[turn].location].buySpace(players[turn]);
+//				GameBoard[players[turn].location].buySpace();
 				break;
 			case 1:
 				//sell property
 				break;
 			case 2:
-				propSpace[players[turn].location].buyHouse();
+//				GameBoard[players[turn].location].buyHouse();
 				players[turn].houseCount++;
 				break;
 			case 3:
-				propSpace[players[turn].location].buyHotel();
+//				GameBoard[players[turn].location].buyHotel();
 				players[turn].hotelCount++;
 				break;
 			case 4:
@@ -149,11 +219,13 @@ public class Game {
 		}
 	}
 
-	public void moveToSpace(int roll) {
+	private void moveToSpace(int roll) {
 		for(int i=0;i<roll;i++) {
 			players[turn].location++;
 			if(players[turn].location == 40) {
 				players[turn].location = 0;
+				System.out.println("You passed 'Go' and collected $200");
+				players[turn].setMoney(players[turn].Money+200);
 			}
 		}
 		if(players[turn].doubleCount == 3) {
@@ -167,7 +239,7 @@ public class Game {
 		}
 	}
 	
-	public void jumpToSpace(int space) {
+	private void jumpToSpace(int space) {
 		players[turn].location = space;
 	}
 	
@@ -177,21 +249,24 @@ public class Game {
 	
 	
 	
-	public void chanceCards() {
-		int draw = rnd.nextInt(17);
+	public void chanceCards() throws IOException {
+		int draw = rnd.nextInt(16);
 		System.out.println(chanceCard.chanceCards[draw]);
 		switch(draw) {
 		case 0:
 			//Advance to Go
+			players[turn].setMoney(players[turn].Money+200);
 			jumpToSpace(0);
 			break;
 		case 1:
 			//Advace to Illinois Ave.
 			jumpToSpace(24);
+			spaceAction();
 			break;
 		case 2:
 			//Advance to St. Charles Ave.
 			jumpToSpace(11);
+			spaceAction();
 			break;
 		case 3:
 			//Advance to nearest utility
@@ -201,6 +276,7 @@ public class Game {
 			else {
 				players[turn].location = 28;
 			}
+			spaceAction();
 			break;
 		case 4:
 			//Advance to nearest Railroad
@@ -216,6 +292,7 @@ public class Game {
 			else if(players[turn].location<35 && players[turn].location > 25) {
 				players[turn].location = 35;
 			}
+			spaceAction();
 			break;
 		case 5:
 			//Receive $50
@@ -223,11 +300,18 @@ public class Game {
 			break;
 		case 6:
 			//Get out of jail free
-			players[turn].getJailCard();
+			if(chanceJailCard == false) {
+				players[turn].getJailCard();
+				chanceJailCard = true;
+			}
+			else {
+				chanceCards();
+			}
 			break;
 		case 7:
 			//go back three spaces
-			moveToSpace(-3);
+			players[turn].setLocation(players[turn].location-3);
+			spaceAction();
 			break;
 		case 8:
 			//Go to jail
@@ -248,10 +332,11 @@ public class Game {
 		case 12:
 			//Advance to Boardwalk
 			jumpToSpace(39);
+			spaceAction();
 			break;
 		case 13:
 			//Pay each player $50
-			for(int i=0;i<players.length-1;i++) {
+			for(int i=0;i<playerCount-1;i++) {
 				players[i].setMoney(players[turn].Money+50);
 			}
 			players[turn].setMoney(players[turn].Money-(players.length*50));
@@ -272,6 +357,7 @@ public class Game {
 		switch(draw) {
 		case 0:
 			//Advance to Go
+			players[turn].setMoney(players[turn].Money+200);
 			jumpToSpace(0);
 			break;
 		case 1:
@@ -288,7 +374,13 @@ public class Game {
 			break;
 		case 4:
 			//Get out of jail free
-			players[turn].getJailCard();
+			if(chestJailCard == false) {
+				players[turn].getJailCard();
+				chestJailCard = true;
+			}
+			else {
+				chestCards();
+			}
 			break;
 		case 5:
 			//go to jail
@@ -297,7 +389,7 @@ public class Game {
 			break;
 		case 6:
 			//Collect $50 from each player
-			for(int i=0;i<players.length-1;i++) {
+			for(int i=0;i<playerCount;i++) {
 				players[i].setMoney(players[turn].Money-50);
 			}
 			players[turn].setMoney(players[turn].Money+(players.length*50));
@@ -312,10 +404,10 @@ public class Game {
 			break;
 		case 9:
 			//Collect $10 from each player
-			for(int i=0;i<players.length-1;i++) {
+			for(int i=0;i<playerCount;i++) {
 				players[i].setMoney(players[turn].Money-10);
 			}
-			players[turn].setMoney(players[turn].Money+(players.length*10));
+			players[turn].setMoney(players[turn].Money+(playerCount*10));
 			break;
 		case 10:
 			//Collect $100
@@ -347,11 +439,6 @@ public class Game {
 		}
 	}
 	
-	
-	private void initProp() {
-		
-	}
-	
 	private void initChestCards() {
 		chestCards.communityChestCard[0] = "Advance to 'Go'";
 		chestCards.communityChestCard[1] = "Bank error in your favor. Collect $200";
@@ -372,7 +459,7 @@ public class Game {
 		chestCards.communityChestCard[16] = "You inherit $1000";
 	}	
 	
-	public void initChanceCards() {
+	private void initChanceCards() {
 		chanceCard.chanceCards[0] = "Advance to 'Go'";
 		chanceCard.chanceCards[1] = "Advance to Illinois Ave.";
 		chanceCard.chanceCards[2] = "Advance to St. Charles Place";
@@ -393,11 +480,53 @@ public class Game {
 	
 	private void askForPlayers() throws IOException {
 		playerCount = ConsoleUI.promptForInt("How many people are playing?", 2, 8);
-		int mon = 1500;
 		for(int i=0;i<playerCount;i++) {
 			players[i] = new Player();
 			String playerName = ConsoleUI.promptForInput("What is your name?", false);
-			players[i].init(playerName, PieceNames.BATTLESHIP, mon);
+			players[i].init(playerName, PieceNames.BATTLESHIP);
 		}
+	}
+	
+	private void initSpaces() {
+		GameBoard[0] = new UniqueSpace(0);
+		GameBoard[1] = new PropSpace("Mediterranean Avenue", 60, 2, 10, 30, 90, 160, 200, 30, 50);
+		GameBoard[2] = new UniqueSpace(1);
+		GameBoard[3] = new PropSpace("Baltic Avenue", 60, 4, 20, 60, 180, 320, 450, 30, 50);
+		GameBoard[4] = new UniqueSpace(6);
+		GameBoard[5] = new RailSpace("Reading Railroad", 200);
+		GameBoard[6] = new PropSpace("Oriental Avenue", 100, 6, 30, 90, 270, 400, 550, 50, 50);
+		GameBoard[7] = new UniqueSpace(2);
+		GameBoard[8] = new PropSpace("Vermont Avenue", 100, 6, 30, 90, 270, 400, 550, 50, 50);
+		GameBoard[9] = new PropSpace("Connecticut Avenue", 120, 8, 40, 100, 300, 450, 600, 60, 50);
+		GameBoard[10] = new UniqueSpace(3);
+		GameBoard[11] = new PropSpace("St. Charles Place", 140, 10, 50, 150, 450, 625, 750, 70, 100);
+		GameBoard[12] = new UtilSpace("Electric Company", 150);
+		GameBoard[13] = new PropSpace("States Avenue", 140, 10, 50, 150, 450, 625, 750, 70, 100);
+		GameBoard[14] = new PropSpace("Virginia Avenue", 160, 12, 60, 180, 500, 700, 900, 80, 100);
+		GameBoard[15] = new RailSpace("Pennsylvania Railroad", 200);
+		GameBoard[16] = new PropSpace("St. James Place", 180, 14, 70, 200, 550, 750, 950, 90, 100);
+		GameBoard[17] = new UniqueSpace(1);
+		GameBoard[18] = new PropSpace("Tennessee Avenue", 180, 14, 70, 200, 550, 750, 950, 90, 100);
+		GameBoard[19] = new PropSpace("New York Avenue", 200, 16, 80, 220, 600, 800, 1000, 100, 100);
+		GameBoard[20] = new UniqueSpace(4);
+		GameBoard[21] = new PropSpace("Kentucky Avenue", 220, 18, 90, 250, 700, 875, 1050, 110, 150);
+		GameBoard[22] = new UniqueSpace(2);
+		GameBoard[23] = new PropSpace("Indiana Avenue", 220, 18, 90, 250, 700, 875, 1050, 110, 150);
+		GameBoard[24] = new PropSpace("Illinois Avenue", 240, 20, 100, 300, 750, 925, 1100, 120, 150);
+		GameBoard[25] = new RailSpace("B. and O. Railroad", 200);
+		GameBoard[26] = new PropSpace("Atlantic Avenue", 260, 22, 110, 330, 800, 975, 1150, 130, 150);
+		GameBoard[27] = new PropSpace("Ventnor Avenue", 260, 22, 110, 330, 800, 975, 1150, 130, 150);
+		GameBoard[28] = new UtilSpace("Water Works", 150);
+		GameBoard[29] = new PropSpace("Marvin Gardens", 280, 24, 120, 360, 850, 1025, 1200, 140, 150);
+		GameBoard[30] = new UniqueSpace(5);
+		GameBoard[31] = new PropSpace("Pacific Avenue", 300, 26, 130, 390, 900, 1100, 1275, 150, 200);
+		GameBoard[32] = new PropSpace("North Carolina Avenue", 300, 26, 130, 390, 900, 1100, 1275, 150, 200);
+		GameBoard[33] = new UniqueSpace(1);
+		GameBoard[34] = new PropSpace("Pennsylvania Avenue", 320, 28, 150, 450, 1000, 1200, 1400, 160, 200);
+		GameBoard[35] = new RailSpace("Short Line", 200);
+		GameBoard[36] = new UniqueSpace(2);
+		GameBoard[37] = new PropSpace("Park Place", 350, 35, 175, 500, 1100, 1300, 1500, 175, 200);
+		GameBoard[38] = new UniqueSpace(7);
+		GameBoard[39] = new PropSpace("BoardWalk", 400, 50, 200, 600, 1400, 1700, 2000, 200, 200);
 	}
 }
