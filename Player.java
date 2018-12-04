@@ -8,6 +8,9 @@ public class Player {
 	int location;
 	int numJailCards;
 	int doubleCount;
+	int houseCount;
+	int hotelCount;
+	int jailTurns;
 	boolean inJail;
 
 	public Player() {
@@ -17,6 +20,9 @@ public class Player {
 		location = 0;
 		numJailCards = 0;
 		doubleCount = 0;
+		houseCount = 0;
+		hotelCount = 0;
+		jailTurns = 0;
 		inJail = false;
 	}
 
@@ -27,6 +33,9 @@ public class Player {
 		location = 0;
 		numJailCards = 0;
 		doubleCount = 0;
+		houseCount = 0;
+		hotelCount = 0;
+		jailTurns = 0;
 		inJail = false;
 	}
 
