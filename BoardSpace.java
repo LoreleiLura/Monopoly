@@ -1,12 +1,8 @@
 package edu.neumont.csc110;
 
 public abstract class BoardSpace {
-	public BoardSpace(String name, int purchasePrice, int baseRent, int oneHouseRent, int twoHouseRent,
-			int threeHouseRent, int fourHouseRent, int hotelRent, int houseCost, int morgageCost) {
-	}
 
-	public void init(String name, int purchasePrice, int baseRent, int oneHouseRent, int twoHouseRent,
-			int threeHouseRent, int fourHouseRent, int hotelRent, int houseCost, int morgageCost) {
+	public void init() {
 	}
 
 	public void buyHouse() {
