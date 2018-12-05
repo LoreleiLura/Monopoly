@@ -3,14 +3,17 @@ package edu.neumont.csc110;
 public class UniqueSpace extends BoardSpace {
 	public int identity;
 
+	//initialize the space by identity
 	public UniqueSpace(int identifyer) {
 		identity = identifyer;
 	}
 
+	//return the identity of the space
 	public int getSpace() {
 		return identity;
 	}
-
+	
+	//return a string dedicated to the space.
 	public String toString() {
 		switch (identity) {
 		default:
@@ -35,6 +38,7 @@ public class UniqueSpace extends BoardSpace {
 		}
 	}
 	
+	//return the name. same as toString()
 	public String getName() {
 		switch (identity) {
 		default:
