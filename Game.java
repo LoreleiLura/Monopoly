@@ -169,13 +169,13 @@ public class Game {
 		if(location == 7 || location == 22 || location == 30) {
 			chanceCards();
 		}
-		else if(players[turn].location == 2 || players[turn].location == 17 || players[turn].location == 33) {
+		else if(location == 2 || location == 17 || location == 33) {
 			chestCards();
 		}
-		else if(players[turn].location == 4) {
+		else if(location == 4) {
 			players[turn].setMoney(players[turn].Money-200);
 		}
-		else if(players[turn].location == 10 || players[turn].location == 20 || players[turn].location == 0) {
+		else if(location == 10 || location == 20 || location == 0) {
 			//nothing
 		}
 		else if(players[turn].location == 38) {

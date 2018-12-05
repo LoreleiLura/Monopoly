@@ -69,6 +69,7 @@ public class PropSpace extends BoardSpace {
 
 	public void buySpace(Player i) {
 		owner = i;
+		isOwned = true;
 	}
 
 	public int morgage() {
