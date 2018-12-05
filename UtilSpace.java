@@ -1,4 +1,4 @@
-package parra.alexis.monopoly;
+package edu.neumont.csc110;
 
 import java.util.Random;
 
@@ -6,6 +6,7 @@ public class UtilSpace extends BoardSpace {
 	public String name;
 	public int price;
 	public Player owner;
+	public boolean isOwned = false;
 
 	Random rand = new Random();
 
@@ -26,9 +27,12 @@ public class UtilSpace extends BoardSpace {
 	public void setPrice(int Price) {
 		price = Price;
 	}
-
+	public boolean getOwned() {
+		return isOwned;
+	}
 	public void setOwner(Player i) {
 		owner = i;
+		isOwned=true;
 	}
 
 	public int getRent(boolean otherOwned) {

@@ -1,4 +1,4 @@
-package parra.alexis.monopoly;
+package edu.neumont.csc110;
 
 public class UniqueSpace extends BoardSpace {
 	public int identity;
