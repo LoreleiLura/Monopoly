@@ -14,8 +14,9 @@ public class Game {
 	BoardSpace[] GameBoard = new BoardSpace[40];
 	
 	Player[] players = new Player[8];
-	int playerCount = 0;
+	public int playerCount = 0;
 	public int turn = 0;
+	public int location = players[turn].location;
 	public boolean chestJailCard = false;
 	public boolean chanceJailCard = false;
 	
@@ -69,6 +70,7 @@ public class Game {
 	}
 
 	private void jailedAction() throws IOException {
+		System.out.println(players[turn].Name + ", you're in jail.");
 		String[] jailOptions = new String[4];
 		jailOptions[0] = "Roll for double";
 		jailOptions[1] = "Use 'Get out of Jail Free' card";
@@ -88,6 +90,10 @@ public class Game {
 					int roll = dice1+dice2;
 					moveToSpace(roll);
 					players[turn].inJail = false;
+					players[turn].jailTurns = 0;
+				}
+				else {
+					players[turn].jailTurns++;
 				}
 				break;
 			case 1:
@@ -95,6 +101,7 @@ public class Game {
 				try {
 					players[turn].useJailCard();
 					players[turn].inJail = false;
+					players[turn].jailTurns = 0;
 				} 
 				catch (NoSuchFieldException noJailCard) {
 					System.out.println("You don't have a 'Get Out of Jail Free' card");
@@ -113,14 +120,17 @@ public class Game {
 									players[turn].setMoney(players[turn].Money-price);
 									players[i].setMoney(players[i].Money+price);
 									players[turn].inJail = false;
+									players[turn].jailTurns = 0;
 								}
 							}
 							else {
 								System.out.println(players[i].Name + " does not wish to sell their card.");
+								jailedAction();
 							}
 						}
 						else {
 							System.out.println(players[i].Name + " does not have a card.");
+							jailedAction();
 						}
 					}
 				}
@@ -129,6 +139,7 @@ public class Game {
 				if(players[turn].jailTurns != 0) {
 					players[turn].setMoney(players[turn].Money-50);
 					players[turn].inJail = false;
+					players[turn].jailTurns = 0;
 				}
 				else {
 					System.out.println("You cannot pay your way out of jail on the first turn");
@@ -148,75 +159,86 @@ public class Game {
 		int roll = dice1+dice2;
 		moveToSpace(roll);
 		spaceAction();
-		if(dice1 == dice2 && players[turn].doubleCount < 3) {
+		if(dice1 == dice2 && players[turn].doubleCount < 2) {
 			System.out.println(players[turn].Name + " rolls again");
 			roll();
 		}
 	}
 	
 	private void spaceAction() throws IOException {
-		if(players[turn].location == 7 || players[turn].location == 22 || players[turn].location == 30) {
-			System.out.println("Landed on Chance");
+		if(location == 7 || location == 22 || location == 30) {
 			chanceCards();
 		}
 		else if(players[turn].location == 2 || players[turn].location == 17 || players[turn].location == 33) {
-			System.out.println("Landed on Community Chest");
 			chestCards();
 		}
 		else if(players[turn].location == 4) {
-			System.out.println("Income tax");
 			players[turn].setMoney(players[turn].Money-200);
 		}
-		else if(players[turn].location == 10) {
-			System.out.println("Just visiting");
-		}
-		else if(players[turn].location == 0) {
-			System.out.println("'Go'");
-		}
-		else if(players[turn].location == 20) {
-			System.out.println("Free parking");
+		else if(players[turn].location == 10 || players[turn].location == 20 || players[turn].location == 0) {
+			//nothing
 		}
 		else if(players[turn].location == 38) {
-			System.out.println("Luxury tax");
 			players[turn].setMoney(players[turn].Money-100);
 		}
 		else {
-//			System.out.println(PropSpace[players[turn].location].name);
 			printGameMenu();
 		}
 	}
 
 	private void printGameMenu() throws IOException {
 		if(players[turn].location != 10) {
-			String[] options = new String[5];
-			options[0] = "Buy Property";
-			options[1] = "Sell Property";
-			options[2] = "Buy House";
-			options[3] = "Buy Hotel";
-			options[4] = "Pay Rent";
+			String[] options = new String[6];
+			options[0] = "More Info on Property";
+			options[1] = "Buy Property";
+			options[2] = "Mortage";
+			options[3] = "Buy House";
+			options[4] = "Buy Hotel";
+			options[5] = "Pay Rent";
 			int selection = ConsoleUI.promptForMenuSelection(options, false);
 			switch(selection) {
 			case 0:
-//				GameBoard[players[turn].location].buySpace();
+				GameBoard[players[turn].location].getPrice();
 				break;
 			case 1:
-				//sell property
+				GameBoard[players[turn].location].buySpace(players[turn]);
 				break;
 			case 2:
-//				GameBoard[players[turn].location].buyHouse();
-				players[turn].houseCount++;
+				GameBoard[players[turn].location].morgage();
 				break;
 			case 3:
-//				GameBoard[players[turn].location].buyHotel();
-				players[turn].hotelCount++;
+				if(GameBoard[players[turn].location].getOwned()) {
+					GameBoard[players[turn].location].buyHouse();
+					players[turn].houseCount++;
+				}
+				else {
+					System.out.println("You don't own this property");
+					rent();
+				}
 				break;
 			case 4:
-				
+				if(GameBoard[players[turn].location].getOwned()) {
+					GameBoard[players[turn].location].buyHouse();
+					players[turn].houseCount++;
+				}
+				else {
+					System.out.println("You don't own this property");
+					rent();
+				}
+				break;
+			case 5:
+				rent();
 				break;
 			default:
 				System.out.println("Not an option");
 			}
 		}
+	}
+
+	private void rent() {
+		players[turn].setMoney(players[turn].Money - GameBoard[players[turn].location].getRent());
+		Player owner = GameBoard[players[turn].location].getOwner();
+		owner.setMoney(owner.Money - GameBoard[players[turn].location].getRent());
 	}
 
 	private void moveToSpace(int roll) {
@@ -228,6 +250,7 @@ public class Game {
 				players[turn].setMoney(players[turn].Money+200);
 			}
 		}
+		System.out.println("You landed on " + GameBoard[players[turn].location].getName());
 		if(players[turn].doubleCount == 3) {
 			players[turn].inJail = true;
 			players[turn].location = 10;
@@ -337,7 +360,7 @@ public class Game {
 		case 13:
 			//Pay each player $50
 			for(int i=0;i<playerCount-1;i++) {
-				players[i].setMoney(players[turn].Money+50);
+				players[i].setMoney(players[turn].Money+25);
 			}
 			players[turn].setMoney(players[turn].Money-(players.length*50));
 			break;
@@ -405,7 +428,7 @@ public class Game {
 		case 9:
 			//Collect $10 from each player
 			for(int i=0;i<playerCount;i++) {
-				players[i].setMoney(players[turn].Money-10);
+				players[i].setMoney(players[turn].Money-5);
 			}
 			players[turn].setMoney(players[turn].Money+(playerCount*10));
 			break;
@@ -464,7 +487,7 @@ public class Game {
 		chanceCard.chanceCards[1] = "Advance to Illinois Ave.";
 		chanceCard.chanceCards[2] = "Advance to St. Charles Place";
 		chanceCard.chanceCards[3] = "Advance token to nearest Utility. If unowned, you may buy. If owned, throw a dice and pay owner a total 10 times the amount thrown";
-		chanceCard.chanceCards[4] = "Advanc token to nearest Railroad. if unowned, you may buy. If owned, pay double the rental";
+		chanceCard.chanceCards[4] = "Advance token to nearest Railroad. If unowned, you may buy. If owned, pay double the rental";
 		chanceCard.chanceCards[5] = "Bank pays you dividend of $50";
 		chanceCard.chanceCards[6] = "Get out of Jail Free";
 		chanceCard.chanceCards[7] = "Go back three spaces";
@@ -483,7 +506,28 @@ public class Game {
 		for(int i=0;i<playerCount;i++) {
 			players[i] = new Player();
 			String playerName = ConsoleUI.promptForInput("What is your name?", false);
-			players[i].init(playerName, PieceNames.BATTLESHIP);
+			//players[i].init(playerName, PieceNames.BATTLESHIP);
+			int piece= rnd.nextInt(7)+1;
+			switch(piece) {
+			case 1:
+				players[i].init(playerName, PieceNames.TOPHAT);
+			case 2:
+				players[i].init(playerName, PieceNames.THIMBLE);
+			case 3:
+				players[i].init(playerName, PieceNames.IRON);
+			case 4:
+				players[i].init(playerName, PieceNames.SHOE);
+			case 5:
+				players[i].init(playerName, PieceNames.BATTLESHIP);
+			case 6:
+				players[i].init(playerName, PieceNames.DOG);
+			case 7:
+				players[i].init(playerName, PieceNames.CAT);
+			case 8:
+				players[i].init(playerName, PieceNames.WHEELBARROW);
+			default:
+				players[i].init(playerName, PieceNames.DEFAULT);
+			}
 		}
 	}
 	
