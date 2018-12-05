@@ -16,10 +16,10 @@ public class Game {
 	Player[] players = new Player[8];
 	public int playerCount = 0;
 	public int turn = 0;
-	public int location = players[turn].location;
 	public boolean chestJailCard = false;
 	public boolean chanceJailCard = false;
 	
+	//Start up menu. Ask to play new game or quit
 	public void printStartMenu() throws IOException, NoSuchFieldException {
 		String[] menuOptions = new String[2];
 		menuOptions[0] = "Quit Game";
@@ -37,6 +37,7 @@ public class Game {
 		}
 	}
 	
+	//initialized everything and starts the game
 	public void game() throws IOException, NoSuchFieldException {
 		boolean play = true;
 		while(play) {
@@ -49,6 +50,7 @@ public class Game {
 		}	
 	}
 	
+	//The part that loops. Prints who's turn it is and how much money they have
 	public void run() throws NoSuchFieldException, IOException {
 		boolean gameOver = false;
 		while(!gameOver) {
@@ -69,6 +71,7 @@ public class Game {
 		}
 	}
 
+	//Choices for how to get out of jail
 	private void jailedAction() throws IOException {
 		System.out.println(players[turn].Name + ", you're in jail.");
 		String[] jailOptions = new String[4];
@@ -149,6 +152,7 @@ public class Game {
 		}
 	}
 
+	//rolls dice at beginning of turn. Calls moveToSpace and SpaceAction
 	private void roll() throws IOException {
 		int dice1 = rnd.nextInt(6)+1;
 		int dice2 = rnd.nextInt(6)+1;
@@ -165,17 +169,18 @@ public class Game {
 		}
 	}
 	
+	//determines which space player is on and does action accordingly 
 	private void spaceAction() throws IOException {
-		if(location == 7 || location == 22 || location == 30) {
+		if(players[turn].location == 7 || players[turn].location == 22 || players[turn].location == 30) {
 			chanceCards();
 		}
-		else if(location == 2 || location == 17 || location == 33) {
+		else if(players[turn].location == 2 || players[turn].location == 17 || players[turn].location == 33) {
 			chestCards();
 		}
-		else if(location == 4) {
+		else if(players[turn].location == 4) {
 			players[turn].setMoney(players[turn].Money-200);
 		}
-		else if(location == 10 || location == 20 || location == 0) {
+		else if(players[turn].location == 10 || players[turn].location == 20 || players[turn].location == 0) {
 			//nothing
 		}
 		else if(players[turn].location == 38) {
@@ -186,7 +191,9 @@ public class Game {
 		}
 	}
 
+	//when on property that can be bought, options come up
 	private void printGameMenu() throws IOException {
+		int price = 0;
 		if(players[turn].location != 10) {
 			String[] options = new String[6];
 			options[0] = "More Info on Property";
@@ -199,31 +206,68 @@ public class Game {
 			switch(selection) {
 			case 0:
 				GameBoard[players[turn].location].getPrice();
+				printGameMenu();
 				break;
 			case 1:
-				GameBoard[players[turn].location].buySpace(players[turn]);
+				if(GameBoard[players[turn].location].getOwned()) {
+					System.out.println("Someone owns this spot");
+					rent();
+				}
+				else {
+					GameBoard[players[turn].location].buySpace(players[turn]);
+					price = GameBoard[players[turn].location].getPrice();
+					players[turn].setMoney(players[turn].Money - price);
+					System.out.println("You bought this space");
+				}
 				break;
 			case 2:
-				GameBoard[players[turn].location].morgage();
-				break;
-			case 3:
 				if(GameBoard[players[turn].location].getOwned()) {
-					GameBoard[players[turn].location].buyHouse();
-					players[turn].houseCount++;
+					Player owner = GameBoard[players[turn].location].getOwner();
+					if(owner == players[turn]) {
+						GameBoard[players[turn].location].morgage();				
+					}
 				}
 				else {
 					System.out.println("You don't own this property");
+					printGameMenu();
+				}
+				break;
+			case 3:
+				if(GameBoard[players[turn].location].getOwned()) {
+					System.out.println("You don't own this property");
 					rent();
+				}
+				else {
+					Player owner = GameBoard[players[turn].location].getOwner();
+					if(owner == players[turn]) {
+						GameBoard[players[turn].location].buyHouse();
+						price = GameBoard[players[turn].location].getBuildingPrice();
+						players[turn].setMoney(players[turn].Money - price);
+						players[turn].houseCount++;
+					}
+					else {
+						System.out.println("You don't own this property");
+						printGameMenu();
+					}
 				}
 				break;
 			case 4:
 				if(GameBoard[players[turn].location].getOwned()) {
-					GameBoard[players[turn].location].buyHouse();
-					players[turn].houseCount++;
-				}
-				else {
 					System.out.println("You don't own this property");
 					rent();
+				}
+				else {
+					Player owner = GameBoard[players[turn].location].getOwner();
+					if(owner == players[turn]) {
+						GameBoard[players[turn].location].buyHotel();
+						price = GameBoard[players[turn].location].getBuildingPrice();
+						players[turn].setMoney(players[turn].Money - price);
+						players[turn].houseCount++;				
+					}
+					else {
+						System.out.println("You don't own this property");
+						printGameMenu();
+					}
 				}
 				break;
 			case 5:
@@ -235,12 +279,15 @@ public class Game {
 		}
 	}
 
+	//when landed on property that's owned, pays owner rent
 	private void rent() {
 		players[turn].setMoney(players[turn].Money - GameBoard[players[turn].location].getRent());
 		Player owner = GameBoard[players[turn].location].getOwner();
 		owner.setMoney(owner.Money - GameBoard[players[turn].location].getRent());
+		System.out.println("You payed " + GameBoard[players[turn].location].getRent());
 	}
 
+	//moves player space by space according to roll. Checks for instances to be sent to jail
 	private void moveToSpace(int roll) {
 		for(int i=0;i<roll;i++) {
 			players[turn].location++;
@@ -252,6 +299,7 @@ public class Game {
 		}
 		System.out.println("You landed on " + GameBoard[players[turn].location].getName());
 		if(players[turn].doubleCount == 3) {
+			System.out.println("Sent to Jail. To many doubles.");
 			players[turn].inJail = true;
 			players[turn].location = 10;
 			players[turn].doubleCount = 0;
@@ -262,6 +310,7 @@ public class Game {
 		}
 	}
 	
+	//Location set to space passed in
 	private void jumpToSpace(int space) {
 		players[turn].location = space;
 	}
@@ -271,7 +320,7 @@ public class Game {
 	
 	
 	
-	
+	//Randomly picks a chance card
 	public void chanceCards() throws IOException {
 		int draw = rnd.nextInt(16);
 		System.out.println(chanceCard.chanceCards[draw]);
@@ -299,6 +348,7 @@ public class Game {
 			else {
 				players[turn].location = 28;
 			}
+			System.out.println("You landed on " + GameBoard[players[turn].location].getName());
 			spaceAction();
 			break;
 		case 4:
@@ -315,6 +365,7 @@ public class Game {
 			else if(players[turn].location<35 && players[turn].location > 25) {
 				players[turn].location = 35;
 			}
+			System.out.println("You landed on " + GameBoard[players[turn].location].getName());
 			spaceAction();
 			break;
 		case 5:
@@ -374,6 +425,7 @@ public class Game {
 		}
 	}
 	
+	//randomly picks a community chest card
 	public void chestCards() {
 		int draw = rnd.nextInt(17);
 		System.out.println(chestCards.communityChestCard[draw]);
@@ -408,6 +460,7 @@ public class Game {
 		case 5:
 			//go to jail
 			players[turn].inJail = true;
+			System.out.println("You landed on " + GameBoard[players[turn].location].getName());
 			jumpToSpace(10);
 			break;
 		case 6:
@@ -462,6 +515,7 @@ public class Game {
 		}
 	}
 	
+	//initialize community chest cards
 	private void initChestCards() {
 		chestCards.communityChestCard[0] = "Advance to 'Go'";
 		chestCards.communityChestCard[1] = "Bank error in your favor. Collect $200";
@@ -482,6 +536,7 @@ public class Game {
 		chestCards.communityChestCard[16] = "You inherit $1000";
 	}	
 	
+	//initialize chance cards
 	private void initChanceCards() {
 		chanceCard.chanceCards[0] = "Advance to 'Go'";
 		chanceCard.chanceCards[1] = "Advance to Illinois Ave.";
@@ -501,6 +556,7 @@ public class Game {
 		chanceCard.chanceCards[15] = "You have won a crossword competition. Collect $100";
 	}
 	
+	//initialize all players
 	private void askForPlayers() throws IOException {
 		playerCount = ConsoleUI.promptForInt("How many people are playing?", 2, 8);
 		for(int i=0;i<playerCount;i++) {
@@ -531,6 +587,7 @@ public class Game {
 		}
 	}
 	
+	//initialize all board spaces
 	private void initSpaces() {
 		GameBoard[0] = new UniqueSpace(0);
 		GameBoard[1] = new PropSpace("Mediterranean Avenue", 60, 2, 10, 30, 90, 160, 200, 30, 50);
@@ -557,7 +614,7 @@ public class Game {
 		GameBoard[22] = new UniqueSpace(2);
 		GameBoard[23] = new PropSpace("Indiana Avenue", 220, 18, 90, 250, 700, 875, 1050, 110, 150);
 		GameBoard[24] = new PropSpace("Illinois Avenue", 240, 20, 100, 300, 750, 925, 1100, 120, 150);
-		GameBoard[25] = new RailSpace("B. and O. Railroad", 200);
+		GameBoard[25] = new RailSpace("B. & O. Railroad", 200);
 		GameBoard[26] = new PropSpace("Atlantic Avenue", 260, 22, 110, 330, 800, 975, 1150, 130, 150);
 		GameBoard[27] = new PropSpace("Ventnor Avenue", 260, 22, 110, 330, 800, 975, 1150, 130, 150);
 		GameBoard[28] = new UtilSpace("Water Works", 150);
