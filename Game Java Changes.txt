@@ -1,0 +1,29 @@
+private void askForPlayers() throws IOException {
+		playerCount = ConsoleUI.promptForInt("How many people are playing?", 2, 8);
+		for(int i=0;i<playerCount;i++) {
+			players[i] = new Player();
+			String playerName = ConsoleUI.promptForInput("What is your name?", false);
+			//players[i].init(playerName, PieceNames.BATTLESHIP);
+			int piece= rnd.nextInt(7)+1;
+			switch(piece) {
+			case 1:
+				players[i].init(playerName, PieceNames.TOPHAT);
+			case 2:
+				players[i].init(playerName, PieceNames.THIMBLE);
+			case 3:
+				players[i].init(playerName, PieceNames.IRON);
+			case 4:
+				players[i].init(playerName, PieceNames.SHOE);
+			case 5:
+				players[i].init(playerName, PieceNames.BATTLESHIP);
+			case 6:
+				players[i].init(playerName, PieceNames.DOG);
+			case 7:
+				players[i].init(playerName, PieceNames.CAT);
+			case 8:
+				players[i].init(playerName, PieceNames.WHEELBARROW);
+			default:
+				players[i].init(playerName, PieceNames.DEFAULT);
+			}
+		}
+	}
