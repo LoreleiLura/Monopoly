@@ -1,4 +1,4 @@
-package parra.alexis.monopoly;
+package edu.neumont.csc110;
 
 public class PropSpace extends BoardSpace {
 	public String propName = "";
@@ -8,6 +8,7 @@ public class PropSpace extends BoardSpace {
 	public boolean hasHotel = false;
 	public boolean monopoly = false;
 	public boolean morgaged = false;
+	public boolean isOwned = false;
 
 	// rent Values:
 	public int zeroHouse, oneHouse, twoHouse, threeHouse, fourHouse, hotel, morgage;
@@ -133,6 +134,10 @@ public class PropSpace extends BoardSpace {
 		return owner;
 	}
 
+	public boolean getOwned() {
+		return isOwned;
+	}
+
 	public boolean getMorgaged() {
 		return morgaged;
 	}
@@ -144,12 +149,41 @@ public class PropSpace extends BoardSpace {
 	public int getPrice() {
 		return Price;
 	}
-	
+
 	public void payMorgage() {
-		morgaged=false;
+		morgaged = false;
 	}
-	
+
 	public String toString() {
-		return propName+" Costs $"+getRent()+" and has "+getHouse()+" houses.";
+		String returnString = "";
+		boolean nameTooLong = false;
+		returnString += "  _____________________     ____________________\n";
+		returnString += "  |                   |     |                  | \n" + "  |";
+		String propName = "park Place";
+		if (propName.length() < 20) {
+			returnString += propName;
+			for (int i = propName.length(); i < 19; i++) {
+				returnString += " ";
+			}
+			returnString += "|     |";
+		} else {
+			if (propName.lastIndexOf(" ") > -1) {
+				nameTooLong = true;
+				returnString += propName.substring(0, propName.lastIndexOf(" "));
+				for (int i = propName.length(); i < 19; i++) {
+					returnString += " ";
+				}
+				returnString += "|     |";
+			}
+		}
+		int morgage = 50;
+		String morgageString = "Morgage: " + morgage;
+		returnString += morgageString;
+		for (int i = morgageString.length(); i < 18; i++) {
+			returnString += " ";
+		}
+		returnString += "|\n";
+
+		return propName + " Costs $" + getRent() + " and has " + getHouse() + " houses.";
 	}
 }
