@@ -1,6 +1,8 @@
 package edu.neumont.csc110;
 
 public abstract class BoardSpace {
+	
+	//Abstract Class BoardSpace used to declare
 
 	public void init() {
 	}
@@ -52,5 +54,14 @@ public abstract class BoardSpace {
 
 	public String toString() {
 		return "";
+	}
+
+	public boolean getOwned() {return false;}
+
+	public void buySpace(Player player) {
+	}
+
+	public int getRent() {
+		return 0;
 	}
 }
