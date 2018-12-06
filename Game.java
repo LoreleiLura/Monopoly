@@ -3,7 +3,7 @@ package edu.neumont.csc110;
 import java.io.IOException;
 import java.util.Random;
 import edu.neumont.csc110.Player.PieceNames;
-import interfaces.ConsoleUI;
+//import interfaces.ConsoleUI;
 
 public class Game {
 	
@@ -283,7 +283,13 @@ public class Game {
 	private void rent() {
 		players[turn].setMoney(players[turn].Money - GameBoard[players[turn].location].getRent());
 		Player owner = GameBoard[players[turn].location].getOwner();
-		owner.setMoney(owner.Money - GameBoard[players[turn].location].getRent());
+		try {
+		owner.setMoney(
+				owner.getMoney() - 
+				GameBoard[players[turn].location].getRent());}
+		catch(NullPointerException e) {
+			System.out.println("You cannot pay Rent This turn.");
+		}
 		System.out.println("You payed " + GameBoard[players[turn].location].getRent());
 	}
 
